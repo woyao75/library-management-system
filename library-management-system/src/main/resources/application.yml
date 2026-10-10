@@ -13,3 +13,11 @@ mybatis:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     # 开启驼峰命名开关
     map-underscore-to-camel-case: true
+
+springdoc:
+  api-docs:
+    enabled: true
+  group-configs:
+    - group: library
+      packages-to-scan: com.woyao.librarymanagementsystem.controller
+      paths-to-match: /categories/**

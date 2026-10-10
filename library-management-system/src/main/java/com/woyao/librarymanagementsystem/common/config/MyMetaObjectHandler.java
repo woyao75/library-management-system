@@ -18,7 +18,7 @@ public class MyMetaObjectHandler implements MetaObjectHandler {
 
         strictInsertFill(
                 metaObject,
-                "creatAt",
+                "createAt",
                 LocalDateTime.class,
                 now
         );
