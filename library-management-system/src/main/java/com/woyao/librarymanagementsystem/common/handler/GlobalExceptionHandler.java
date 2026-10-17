@@ -5,12 +5,16 @@ import com.woyao.librarymanagementsystem.common.result.Result;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.validation.BindException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -88,6 +92,31 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public Result<?> handleHttpMessageNotReadableException(HttpMessageNotReadableException e){
         return Result.error(400,"请求参数格式错误");
+    }
+
+    /**
+     * 返回参数类型异常
+     */
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public Result<?> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e){
+        return Result.error(400,"参数类型错误");
+    }
+
+    /**
+     * 重复键异常
+     */
+    @ExceptionHandler(DuplicateKeyException.class)
+    public Result<?> handleDuplicateKeyException(DuplicateKeyException e){
+        return Result.error(400,"数据已存在，请勿重复添加或修改为重复值");
+    }
+
+    /**
+     * 资源存在异常
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Result<Void>> handleNoResourceFoundException(NoResourceFoundException e){
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Result.<Void>error(404,"请求的资源不存在"));
     }
 
     /**

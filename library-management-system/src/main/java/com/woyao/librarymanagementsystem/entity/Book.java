@@ -22,7 +22,7 @@ public class Book {
     private String title;
     private String author;
     private String publisher;
-    private LocalDateTime    publishedDate;
+    private LocalDate publishDate;
     private Integer categoryId;
     private Integer price;
     private String description;

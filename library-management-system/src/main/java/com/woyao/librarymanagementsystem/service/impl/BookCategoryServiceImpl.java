@@ -49,7 +49,7 @@ public class BookCategoryServiceImpl implements BookCategoryService {
 
     @Override
     public void update(Integer categoryId, BookCategoryUpdateDTO dto) {
-        checkBookExists(categoryId);
+        checkCategoryExists(categoryId);
 
         String categoryName = dto.getCategoryName().strip();
 
@@ -70,7 +70,7 @@ public class BookCategoryServiceImpl implements BookCategoryService {
 
     @Override
     public void delete(Integer categoryId) {
-        checkBookExists(categoryId);
+        checkCategoryExists(categoryId);
 
         Long count = bookMapper.selectCount(
                 Wrappers.<Book>lambdaQuery()
@@ -89,7 +89,7 @@ public class BookCategoryServiceImpl implements BookCategoryService {
     }
 
     @Override
-    public List<BookCategoryVO> list() {
+    public List<BookCategoryVO> list()  {
         List<BookCategory> categories = bookCategoryMapper.selectList(
                 Wrappers.<BookCategory>lambdaQuery()
                         .orderByAsc(BookCategory::getCategoryId)
@@ -139,7 +139,7 @@ public class BookCategoryServiceImpl implements BookCategoryService {
         }
     }
 
-    private void checkBookExists(Integer id) {
+    private void checkCategoryExists(Integer id) {
         BookCategory category = bookCategoryMapper.selectById(id);
 
         if(category == null) {

@@ -7,7 +7,7 @@ spring:
     username: root
     password: 123456
 
-mybatis:
+mybatis-plus:
   configuration:
     # MyBatis 日志输出配置
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
@@ -20,4 +20,6 @@ springdoc:
   group-configs:
     - group: library
       packages-to-scan: com.woyao.librarymanagementsystem.controller
-      paths-to-match: /categories/**
+      paths-to-match:
+        - /categories/**
+        - /books/**
