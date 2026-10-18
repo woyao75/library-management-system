@@ -30,6 +30,18 @@ public class BorrowService {
             throw new BusinessException(404,"图书不存在");
         }
 
+        // 2. 查询当前用户是否还有这本书未归还
+        long activeCount = borrowRecordMapper.selectCount(
+                Wrappers.<BorrowRecord>lambdaQuery()
+                        .eq(BorrowRecord::getBookId,bookId)
+                        .eq(BorrowRecord::getUserId,userId)
+                        .eq(BorrowRecord::getStatus,BorrowStatus.BORROWED.getCode())
+        );
+
+        if(activeCount > 0){
+            throw new BusinessException(409,"该书尚未归还");
+        }
+
         // 3. 不要在没有行锁时，先读取库存，再把计算结果直接写回
         int updatedRows = bookMapper.update(
                 null,
@@ -66,6 +78,78 @@ public class BorrowService {
         }
 
         return record.getRecordId();
+    }
+
+    @Transactional
+    public void returnBook(int userId, int recordId){
+        // 1. 读取记录，取得bookId
+        BorrowRecord originalRecord = borrowRecordMapper.selectById(recordId);
+
+        checkRecordOwner(originalRecord, userId);
+
+        int bookId =  originalRecord.getBookId();
+
+        // 2. 先锁图书，再锁借阅记录
+        Book book = lockBook(bookId);
+
+        BorrowRecord lockedRecord = borrowRecordMapper.selectOne(
+                Wrappers.<BorrowRecord>lambdaQuery()
+                        .eq(BorrowRecord::getRecordId,recordId)
+                        .last("for update")
+        );
+
+        checkRecordOwner(lockedRecord, userId);
+
+        // 3. 使用加锁后读取的状态，若重复归还直接结束
+        if(lockedRecord.getStatus() == BorrowStatus.RETURNED.getCode()){
+            return;
+        }
+
+        if(book == null){
+            throw new BusinessException(409, "图书状态异常");
+
+        }
+
+        // 4. 更新条件同时检查记录归属和未归还状态
+        LocalDateTime returnTime = LocalDateTime.now();
+
+        int returnedRows = borrowRecordMapper.update(
+                null,
+                Wrappers.<BorrowRecord>lambdaUpdate()
+                        .eq(BorrowRecord::getBookId,bookId)
+                        .eq(BorrowRecord::getUserId,userId)
+                        .eq(BorrowRecord::getStatus,BorrowStatus.BORROWED.getCode())
+                        .set(BorrowRecord::getStatus,BorrowStatus.RETURNED.getCode())
+                        .set(BorrowRecord::getReturnDate,returnTime)
+                        .set(BorrowRecord::getUpdateTime,returnTime)
+        );
+
+        if(returnedRows != 1){
+            throw new BusinessException(409, "借阅状态发生变化");
+        }
+
+        // 5. 失败时，事务会撤销第 4 步
+        int updateRows = bookMapper.update(
+                null,
+                Wrappers.<Book>lambdaUpdate()
+                        .eq(Book::getBookId, bookId)
+                        .lt(Book::getAvailableCopies,book.getTotalCopies())
+                        .setIncrBy(Book::getAvailableCopies,1)
+                        .set(Book::getUpdateTime,returnTime)
+        );
+
+        if(updateRows != 1){
+            throw new BusinessException(409, "库存恢复失败");
+        }
+    }
+
+    private void checkRecordOwner(BorrowRecord record, int userId) {
+        if (record == null){
+            throw new BusinessException(404, "借阅记录不存在");
+        }
+        if (record.getUserId() != userId){
+            throw new BusinessException(404, "借阅记录不存在");
+        }
     }
 
     private Book lockBook(int bookId) {
