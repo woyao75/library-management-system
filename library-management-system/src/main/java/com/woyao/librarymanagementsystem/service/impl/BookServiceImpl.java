@@ -7,22 +7,22 @@ import com.woyao.librarymanagementsystem.common.exception.BusinessException;
 import com.woyao.librarymanagementsystem.common.result.PageResult;
 import com.woyao.librarymanagementsystem.dto.request.BookAddDTO;
 import com.woyao.librarymanagementsystem.dto.request.BookQueryDTO;
+import com.woyao.librarymanagementsystem.dto.request.BookUpdateDTO;
 import com.woyao.librarymanagementsystem.dto.response.BookDetailVO;
 import com.woyao.librarymanagementsystem.dto.response.BookListVO;
 import com.woyao.librarymanagementsystem.entity.Book;
 import com.woyao.librarymanagementsystem.entity.BookCategory;
+import com.woyao.librarymanagementsystem.entity.BorrowRecord;
 import com.woyao.librarymanagementsystem.mapper.BookCategoryMapper;
 import com.woyao.librarymanagementsystem.mapper.BookMapper;
 import com.woyao.librarymanagementsystem.mapper.BorrowRecordMapper;
 import com.woyao.librarymanagementsystem.mapper.SysUserMapper;
 import com.woyao.librarymanagementsystem.service.BookService;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDate;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -34,12 +34,13 @@ public class BookServiceImpl implements BookService {
     private final BorrowRecordMapper borrowRecordMapper;
 
     @Override
+    @Transactional
     public void add(BookAddDTO dto) {
         String name = dto.getTitle().strip();
         String isbn = dto.getIsbn().strip();
 
         checkCategoryExists(dto.getCategoryId());
-        checkIsbnExists(isbn);
+        checkIsbnExists(isbn, dto.getCategoryId());
 
         Book book = new Book();
         book.setTitle(name);
@@ -64,6 +65,61 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
+    @Transactional
+    public void delete(Integer bookId) {
+        checkBookExists(bookId);
+
+        long count = borrowRecordMapper.selectCount(
+                Wrappers.<BorrowRecord>lambdaQuery()
+                        .eq(BorrowRecord::getBookId, bookId)
+                        .eq(BorrowRecord::getStatus,0)
+        );
+
+        if(count > 0) {
+            throw new BusinessException("该图书存在未归还的借阅记录，不能删除");
+        }
+
+        int affectRows = bookMapper.deleteById(bookId);
+
+        if(affectRows != 1) {
+            throw new BusinessException("该图书已被删除");
+        }
+    }
+
+    @Override
+    @Transactional
+    public void update(Integer bookId, BookUpdateDTO dto) {
+        checkCategoryExists(dto.getCategoryId());
+        checkBookExists(bookId);
+
+        String title = dto.getTitle().strip();
+        String isbn = dto.getIsbn().strip();
+
+        checkCategoryExists(dto.getCategoryId());
+
+        checkIsbnExists(isbn, bookId);
+
+        Book book = new Book();
+
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setAuthor(dto.getAuthor().strip());
+        book.setPublisher(dto.getPublisher().strip());
+        book.setPublishDate(dto.getPublishDate());
+        book.setCategoryId(dto.getCategoryId());
+        book.setPrice(dto.getPrice());
+        book.setDescription(dto.getDescription());
+        book.setCoverUrl(dto.getCoverUrl());
+        book.setLocation(dto.getLocation().strip());
+
+        int affectRows = bookMapper.updateById(book);
+
+        if (affectRows == 0) {
+            throw new BusinessException("图书更新失败");
+        }
+    }
+
+    @Override
     public BookDetailVO detail(Integer bookId) {
         Book book = bookMapper.selectById(bookId);
 
@@ -72,53 +128,6 @@ public class BookServiceImpl implements BookService {
         }
 
         return toVO(book);
-    }
-
-    private void checkBookExists(Integer id) {
-        Book book = bookMapper.selectById(id);
-
-        if(book == null){
-            throw new BusinessException("图书不存在或已被删除");
-        }
-    }
-
-    private void checkCategoryExists(Integer id) {
-        BookCategory category = bookCategoryMapper.selectById(id);
-
-        if(category == null) {
-            throw new BusinessException("分类不存在或已被删除");
-        }
-    }
-
-    private void checkIsbnExists(String isbn) {
-        Long count = bookMapper.selectCount(
-                Wrappers.<Book>lambdaQuery()
-                        .eq(Book::getIsbn,isbn)
-        );
-
-        if(count > 0) {
-            throw new BusinessException("该ISBN对应图书已存在");
-        }
-    }
-
-    private BookDetailVO toVO(Book book){
-        BookDetailVO bookDetailVO = new BookDetailVO();
-
-        bookDetailVO.setBookId(book.getBookId());
-        bookDetailVO.setIsbn(book.getIsbn());
-        bookDetailVO.setTitle(book.getTitle());
-        bookDetailVO.setAuthor(book.getAuthor());
-        bookDetailVO.setPublisher(book.getPublisher());
-        bookDetailVO.setPublishDate(book.getPublishDate());
-        bookDetailVO.setCategoryId(book.getCategoryId());
-        bookDetailVO.setPrice(book.getPrice());
-        bookDetailVO.setDescription(book.getDescription());
-        bookDetailVO.setCoverUrl(book.getCoverUrl());
-        bookDetailVO.setTotalCopies(book.getTotalCopies());
-        bookDetailVO.setAvailableCopies(book.getAvailableCopies());
-        bookDetailVO.setLocation(book.getLocation());
-
-        return bookDetailVO;
     }
 
     @Override
@@ -166,6 +175,58 @@ public class BookServiceImpl implements BookService {
         IPage<BookListVO> voPage = result.convert(this::toListVO);
 
         return PageResult.of(voPage);
+    }
+
+    private void checkBookExists(Integer id) {
+        Book book = bookMapper.selectById(id);
+
+        if(book == null){
+            throw new BusinessException("图书不存在或已被删除");
+        }
+    }
+
+    private void checkCategoryExists(Integer id) {
+        BookCategory category = bookCategoryMapper.selectById(id);
+
+        if(category == null) {
+            throw new BusinessException("分类不存在或已被删除");
+        }
+    }
+
+    private void checkIsbnExists(String isbn, Integer bookId) {
+        Long count = bookMapper.selectCount(
+                Wrappers.<Book>lambdaQuery()
+                        .eq(Book::getIsbn,isbn)
+                        .ne(
+                                bookId != null,
+                                Book::getBookId,
+                                bookId
+                        )
+        );
+
+        if(count > 0) {
+            throw new BusinessException("该ISBN对应图书已存在");
+        }
+    }
+
+    private BookDetailVO toVO(Book book){
+        BookDetailVO bookDetailVO = new BookDetailVO();
+
+        bookDetailVO.setBookId(book.getBookId());
+        bookDetailVO.setIsbn(book.getIsbn());
+        bookDetailVO.setTitle(book.getTitle());
+        bookDetailVO.setAuthor(book.getAuthor());
+        bookDetailVO.setPublisher(book.getPublisher());
+        bookDetailVO.setPublishDate(book.getPublishDate());
+        bookDetailVO.setCategoryId(book.getCategoryId());
+        bookDetailVO.setPrice(book.getPrice());
+        bookDetailVO.setDescription(book.getDescription());
+        bookDetailVO.setCoverUrl(book.getCoverUrl());
+        bookDetailVO.setTotalCopies(book.getTotalCopies());
+        bookDetailVO.setAvailableCopies(book.getAvailableCopies());
+        bookDetailVO.setLocation(book.getLocation());
+
+        return bookDetailVO;
     }
 
     private BookListVO toListVO(Book book) {

@@ -16,6 +16,7 @@ import com.woyao.librarymanagementsystem.mapper.BookMapper;
 import com.woyao.librarymanagementsystem.service.BookCategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
@@ -48,6 +49,7 @@ public class BookCategoryServiceImpl implements BookCategoryService {
     }
 
     @Override
+    @Transactional
     public void update(Integer categoryId, BookCategoryUpdateDTO dto) {
         checkCategoryExists(categoryId);
 
@@ -69,10 +71,11 @@ public class BookCategoryServiceImpl implements BookCategoryService {
     }
 
     @Override
+    @Transactional
     public void delete(Integer categoryId) {
         checkCategoryExists(categoryId);
 
-        Long count = bookMapper.selectCount(
+        long count = bookMapper.selectCount(
                 Wrappers.<Book>lambdaQuery()
                         .eq(Book::getCategoryId, categoryId)
         );
