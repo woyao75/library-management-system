@@ -13,6 +13,7 @@ import com.woyao.librarymanagementsystem.dto.response.BookListVO;
 import com.woyao.librarymanagementsystem.entity.Book;
 import com.woyao.librarymanagementsystem.entity.BookCategory;
 import com.woyao.librarymanagementsystem.entity.BorrowRecord;
+import com.woyao.librarymanagementsystem.enums.BorrowStatus;
 import com.woyao.librarymanagementsystem.mapper.BookCategoryMapper;
 import com.woyao.librarymanagementsystem.mapper.BookMapper;
 import com.woyao.librarymanagementsystem.mapper.BorrowRecordMapper;
@@ -72,7 +73,7 @@ public class BookServiceImpl implements BookService {
         long count = borrowRecordMapper.selectCount(
                 Wrappers.<BorrowRecord>lambdaQuery()
                         .eq(BorrowRecord::getBookId, bookId)
-                        .eq(BorrowRecord::getStatus,0)
+                        .eq(BorrowRecord::getStatus, BorrowStatus.BORROWED.getCode())
         );
 
         if(count > 0) {
@@ -81,7 +82,7 @@ public class BookServiceImpl implements BookService {
 
         int affectRows = bookMapper.deleteById(bookId);
 
-        if(affectRows != 1) {
+        if(affectRows == 0) {
             throw new BusinessException("该图书已被删除");
         }
     }
