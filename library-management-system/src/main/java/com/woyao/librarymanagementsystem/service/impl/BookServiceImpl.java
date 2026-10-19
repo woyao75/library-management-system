@@ -7,6 +7,7 @@ import com.woyao.librarymanagementsystem.common.exception.BusinessException;
 import com.woyao.librarymanagementsystem.common.result.PageResult;
 import com.woyao.librarymanagementsystem.dto.request.BookAddDTO;
 import com.woyao.librarymanagementsystem.dto.request.BookQueryDTO;
+import com.woyao.librarymanagementsystem.dto.request.BookStockUpdateDTO;
 import com.woyao.librarymanagementsystem.dto.request.BookUpdateDTO;
 import com.woyao.librarymanagementsystem.dto.response.BookDetailVO;
 import com.woyao.librarymanagementsystem.dto.response.BookListVO;
@@ -23,6 +24,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+
+import java.time.LocalDateTime;
 
 
 @Service
@@ -89,6 +92,42 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional
+    public void adjustStock(Integer bookId, Integer totalCopies) {
+
+        if(totalCopies < 0) {
+            throw new BusinessException(400, "馆藏总量不能小于0");
+        }
+
+        Book book = bookMapper.selectOne(
+                Wrappers.<Book>lambdaQuery()
+                        .eq(Book::getBookId, bookId)
+                        .last("for update")
+        );
+
+        if(book == null) {
+            throw new BusinessException(404, "图书不存在");
+        }
+
+        int borrowedCount = book.getTotalCopies() -  book.getAvailableCopies();
+
+        if(totalCopies < borrowedCount) {
+            throw new BusinessException(400, "馆藏总量不能小于已借阅量");
+        }
+
+        int newAvailableCopies = totalCopies - borrowedCount;
+
+        int updateRow = bookMapper.update(
+                Wrappers.<Book>lambdaUpdate()
+                        .eq(Book::getBookId, bookId)
+                        .set(Book::getAvailableCopies, newAvailableCopies)
+                        .set(Book::getTotalCopies, totalCopies)
+                        .set(Book::getUpdateTime, LocalDateTime.now())
+        );
+        if(updateRow != 1) {}
+    }
+
+    @Override
+    @Transactional
     public void update(Integer bookId, BookUpdateDTO dto) {
         checkCategoryExists(dto.getCategoryId());
         checkBookExists(bookId);
@@ -102,6 +141,7 @@ public class BookServiceImpl implements BookService {
 
         Book book = new Book();
 
+        book.setBookId(bookId);
         book.setIsbn(isbn);
         book.setTitle(title);
         book.setAuthor(dto.getAuthor().strip());
@@ -179,7 +219,11 @@ public class BookServiceImpl implements BookService {
     }
 
     private void checkBookExists(Integer id) {
-        Book book = bookMapper.selectById(id);
+        Book book = bookMapper.selectOne(
+                Wrappers.<Book>lambdaQuery()
+                        .eq(Book::getBookId, id)
+                        .last("for update")
+        );
 
         if(book == null){
             throw new BusinessException("图书不存在或已被删除");
@@ -187,7 +231,11 @@ public class BookServiceImpl implements BookService {
     }
 
     private void checkCategoryExists(Integer id) {
-        BookCategory category = bookCategoryMapper.selectById(id);
+        BookCategory category = bookCategoryMapper.selectOne(
+                Wrappers.<BookCategory>lambdaQuery()
+                        .eq(BookCategory::getCategoryId, id)
+                        .last("for update")
+        );
 
         if(category == null) {
             throw new BusinessException("分类不存在或已被删除");

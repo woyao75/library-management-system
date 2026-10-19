@@ -143,7 +143,11 @@ public class BookCategoryServiceImpl implements BookCategoryService {
     }
 
     private void checkCategoryExists(Integer id) {
-        BookCategory category = bookCategoryMapper.selectById(id);
+        BookCategory category = bookCategoryMapper.selectOne(
+                Wrappers.<BookCategory>lambdaQuery()
+                        .eq(BookCategory::getCategoryId, id)
+                        .last("for update")
+        );
 
         if(category == null) {
             throw new BusinessException("分类不存在或已被删除");

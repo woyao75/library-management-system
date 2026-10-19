@@ -17,6 +17,8 @@ public interface BookService {
 
     void delete(Integer bookId);
 
+    void adjustStock(Integer bookId, Integer totalCopies);
+
     BookDetailVO detail(Integer bookId);
 
     PageResult<BookListVO> page(BookQueryDTO dto);

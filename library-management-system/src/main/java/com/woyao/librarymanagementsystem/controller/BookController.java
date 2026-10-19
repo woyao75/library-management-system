@@ -5,6 +5,7 @@ import com.woyao.librarymanagementsystem.common.result.PageResult;
 import com.woyao.librarymanagementsystem.common.result.Result;
 import com.woyao.librarymanagementsystem.dto.request.BookAddDTO;
 import com.woyao.librarymanagementsystem.dto.request.BookQueryDTO;
+import com.woyao.librarymanagementsystem.dto.request.BookStockUpdateDTO;
 import com.woyao.librarymanagementsystem.dto.request.BookUpdateDTO;
 import com.woyao.librarymanagementsystem.dto.response.BookDetailVO;
 import com.woyao.librarymanagementsystem.dto.response.BookListVO;
@@ -41,6 +42,13 @@ public class BookController {
     @DeleteMapping("/{id}")
     public Result<Void> deleteBook(@PathVariable("id")@Positive Integer bookId) {
         bookService.delete(bookId);
+        return Result.success();
+    }
+
+    @Operation(summary = "调整馆藏总量")
+    @PutMapping("/{id}")
+    public Result<Void> adjustStock(@PathVariable("id") Integer bookId, @Valid @RequestBody BookStockUpdateDTO dto) {
+        bookService.adjustStock(bookId, dto.getTotalCopies());
         return Result.success();
     }
 
