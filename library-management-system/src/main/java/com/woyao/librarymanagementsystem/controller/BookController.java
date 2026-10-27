@@ -46,7 +46,7 @@ public class BookController {
     }
 
     @Operation(summary = "调整馆藏总量")
-    @PutMapping("/{id}")
+    @PutMapping("/{id}/stock")
     public Result<Void> adjustStock(@PathVariable("id") Integer bookId, @Valid @RequestBody BookStockUpdateDTO dto) {
         bookService.adjustStock(bookId, dto.getTotalCopies());
         return Result.success();

@@ -16,7 +16,7 @@ import org.springframework.validation.BindException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import java.util.stream.Collectors;
+import static com.woyao.librarymanagementsystem.common.result.Result.error;
 
 
 /**
@@ -31,8 +31,15 @@ public class GlobalExceptionHandler {
      * 处理自定义的业务异常
      */
     @ExceptionHandler(BusinessException.class)
-    public Result<?>  handleBusinessException(BusinessException e){
-        return Result.error(e.getCode(),e.getMessage());
+    public ResponseEntity<Result<Void>> handleBusinessException(BusinessException e){
+        HttpStatus status = HttpStatus.resolve(e.getCode());
+
+        if(status == null || !status.isError()){
+            status = HttpStatus.BAD_REQUEST;
+        }
+
+        return ResponseEntity.status(status)
+                .body(Result.<Void>error(e.getCode(), e.getMessage()));
     }
 
     /**
@@ -43,7 +50,7 @@ public class GlobalExceptionHandler {
         // 获取第一个校验失败的信息
         String message = e.getBindingResult()
                         .getAllErrors()
-                        .get(0)
+                        .getFirst()
                         .getDefaultMessage();
 
         // 获取全部失败信息
@@ -57,7 +64,7 @@ public class GlobalExceptionHandler {
 //                    + ": "
 //                    + fieldError.getDefaultMessage();
 //        }
-        return Result.error(400,message);
+        return error(400,message);
     }
 
     /**
@@ -65,8 +72,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(BindException.class)
     public Result<?> handleBindException(BindException e){
-        String message = e.getBindingResult().getAllErrors().get(0).getDefaultMessage();
-        return Result.error(400,message);
+        String message = e.getBindingResult().getAllErrors().getFirst().getDefaultMessage();
+        return error(400,message);
     }
 
     /**
@@ -83,7 +90,7 @@ public class GlobalExceptionHandler {
         //                   .stream()
         //                   .map(item -> item.getMessage())
         //                   .collect(Collectors.joining("；"));
-        return Result.error(400,message);
+        return error(400,message);
     }
 
     /**
@@ -91,7 +98,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public Result<?> handleHttpMessageNotReadableException(HttpMessageNotReadableException e){
-        return Result.error(400,"请求参数格式错误");
+        return error(400,"请求参数格式错误");
     }
 
     /**
@@ -99,7 +106,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public Result<?> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e){
-        return Result.error(400,"参数类型错误");
+        return error(400,"参数类型错误");
     }
 
     /**
@@ -107,7 +114,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(DuplicateKeyException.class)
     public Result<?> handleDuplicateKeyException(DuplicateKeyException e){
-        return Result.error(400,"数据已存在，请勿重复添加或修改为重复值");
+        return error(400,"数据已存在，请勿重复添加或修改为重复值");
     }
 
     /**
@@ -125,6 +132,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public Result<?> handleException(Exception e){
         log.error("系统异常",e);
-        return Result.error(500,"系统异常，请稍后再试");
+        return error(500,"系统异常，请稍后再试");
     }
 }

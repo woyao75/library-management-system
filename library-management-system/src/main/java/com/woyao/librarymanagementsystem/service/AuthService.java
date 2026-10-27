@@ -42,7 +42,7 @@ public class AuthService {
         // 2. 按用户名查用户
         SysUser sysUser = sysUserMapper.selectOne(
                 Wrappers.<SysUser>lambdaQuery()
-                        .eq(SysUser::getUserName, username.strip())
+                        .eq(SysUser::getUsername, username.strip())
         );
 
         if(sysUser == null){

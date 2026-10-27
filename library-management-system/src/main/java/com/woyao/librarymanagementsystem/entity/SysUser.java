@@ -16,7 +16,7 @@ public class SysUser {
     @TableId(value = "user_id", type = IdType.AUTO)
     private Integer userId;
 
-    private String userName;
+    private String username;
     private String password;
     private Integer role;
     private String phone;

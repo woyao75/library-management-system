@@ -1,17 +1,23 @@
 package com.woyao.librarymanagementsystem.service;
 
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.woyao.librarymanagementsystem.common.exception.BusinessException;
+import com.woyao.librarymanagementsystem.common.result.PageResult;
+import com.woyao.librarymanagementsystem.dto.response.BorrowVO;
 import com.woyao.librarymanagementsystem.entity.Book;
 import com.woyao.librarymanagementsystem.entity.BorrowRecord;
 import com.woyao.librarymanagementsystem.enums.BorrowStatus;
 import com.woyao.librarymanagementsystem.mapper.BookMapper;
 import com.woyao.librarymanagementsystem.mapper.BorrowRecordMapper;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -80,6 +86,47 @@ public class BorrowService {
         return record.getRecordId();
     }
 
+    public BorrowVO detail(int userId, int recordId) {
+        BorrowRecord record = borrowRecordMapper.selectOne(
+                Wrappers.<BorrowRecord>lambdaQuery()
+                        .eq(BorrowRecord::getRecordId,recordId)
+                        .eq(BorrowRecord::getUserId,userId)
+        );
+
+        if(record == null){
+            throw new BusinessException(404, "借阅记录不存在");
+        }
+
+        return toVO(record);
+    }
+
+    public PageResult<BorrowVO> pageMine(int userId, long current, long size){
+        // 告诉数据库分页的规则
+        Page<BorrowRecord> pageRequest = new Page<>(current, size);
+
+        Page<BorrowRecord> recordPage = borrowRecordMapper.selectPage(
+                pageRequest,
+                Wrappers.<BorrowRecord>lambdaQuery()
+                        .eq(BorrowRecord::getUserId,userId)
+                        .orderByDesc(BorrowRecord::getRecordId)
+        );
+
+        List<BorrowVO> items = new ArrayList<>();
+
+        for(BorrowRecord record : recordPage.getRecords()){
+            BorrowVO item = toVO(record);
+            items.add(item);
+        }
+
+        return new PageResult<>(
+                items,
+                recordPage.getTotal(),
+                recordPage.getCurrent(),
+                recordPage.getSize(),
+                recordPage.getPages()
+        );
+    }
+
     @Transactional
     public void returnBook(int userId, int recordId){
         // 1. 读取记录，取得bookId
@@ -116,7 +163,7 @@ public class BorrowService {
         int returnedRows = borrowRecordMapper.update(
                 null,
                 Wrappers.<BorrowRecord>lambdaUpdate()
-                        .eq(BorrowRecord::getBookId,bookId)
+                        .eq(BorrowRecord::getRecordId,recordId)
                         .eq(BorrowRecord::getUserId,userId)
                         .eq(BorrowRecord::getStatus,BorrowStatus.BORROWED.getCode())
                         .set(BorrowRecord::getStatus,BorrowStatus.RETURNED.getCode())
@@ -143,6 +190,8 @@ public class BorrowService {
         }
     }
 
+
+
     private void checkRecordOwner(BorrowRecord record, int userId) {
         if (record == null){
             throw new BusinessException(404, "借阅记录不存在");
@@ -158,5 +207,18 @@ public class BorrowService {
                         .eq(Book::getBookId,bookId)
                         .last("for update")
         );
+    }
+
+    private BorrowVO toVO(BorrowRecord record) {
+        BorrowVO vo = new BorrowVO();
+
+        vo.setRecordId(record.getRecordId());
+        vo.setBookId(record.getBookId());
+        vo.setStatus(record.getStatus());
+        vo.setBorrowDate(record.getBorrowDate());
+        vo.setDueDate(record.getDueDate());
+        vo.setReturnDate(record.getReturnDate());
+
+        return vo;
     }
 }
