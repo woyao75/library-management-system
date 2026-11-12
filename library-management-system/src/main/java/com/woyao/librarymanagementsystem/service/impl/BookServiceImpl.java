@@ -34,7 +34,6 @@ public class BookServiceImpl implements BookService {
 
     private final BookMapper bookMapper;
     private final BookCategoryMapper bookCategoryMapper;
-    private final SysUserMapper sysUserMapper;
     private final BorrowRecordMapper borrowRecordMapper;
 
     @Override

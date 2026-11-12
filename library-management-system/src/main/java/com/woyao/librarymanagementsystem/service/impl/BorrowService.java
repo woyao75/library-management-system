@@ -200,8 +200,6 @@ public class BorrowService {
         );
 
 //        return PageResult.of(recordPage.convert(this::toVO));
-
-
         List<BorrowVO> items = new ArrayList<>();
 
         for(BorrowRecord record : recordPage.getRecords()){

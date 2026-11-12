@@ -14,7 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
-    // 配置翻译官先生和客服小姐姐
+    // 配置翻译官和客服
     private final DatabaseJwtAuthenticationConverter authenticationConverter;
     private final SecurityErrorHandler securityErrorHandler;
 
@@ -22,7 +22,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilerChain(HttpSecurity http) throws Exception{
 
         http.csrf(csrf -> csrf.disable());
-        // 安保策略（不认脸，只认票）
+        // 安保策略
         http.sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
@@ -37,13 +37,13 @@ public class SecurityConfig {
             rules.anyRequest().denyAll();
         });
 
-        // 客服小姐姐处理
+        // 客服处理
         http.exceptionHandling(errors -> {
             errors.authenticationEntryPoint(securityErrorHandler);
             errors.accessDeniedHandler(securityErrorHandler);
         });
 
-        // 翻译官先生验证并翻译身份
+        // 翻译官验证并翻译身份
         http.oauth2ResourceServer(resourceServer -> {
             resourceServer.authenticationEntryPoint(securityErrorHandler);
             resourceServer.jwt(jwt -> jwt.jwtAuthenticationConverter(authenticationConverter));

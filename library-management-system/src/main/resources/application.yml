@@ -13,6 +13,12 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     # 开启驼峰命名开关
     map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+    # 逻辑删除通用配置
+      logic-delete-field: is_deleted
+      logic-not-delete-value: 0
+      logic-delete-value: 1
 
 springdoc:
   api-docs:

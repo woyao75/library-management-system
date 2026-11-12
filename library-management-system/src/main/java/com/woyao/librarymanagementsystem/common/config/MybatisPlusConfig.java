@@ -2,6 +2,7 @@ package com.woyao.librarymanagementsystem.common.config;
 
 import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.OptimisticLockerInnerInterceptor;
 import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,12 +14,14 @@ import org.springframework.context.annotation.Configuration;
 public class MybatisPlusConfig {
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
+//        1. 定义 MP 拦截器
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-
+//        2. 添加具体的拦截器
         PaginationInnerInterceptor paginationInterceptor = new PaginationInnerInterceptor(DbType.MYSQL);
-
         interceptor.addInnerInterceptor(paginationInterceptor);
-
+//        3. 添加乐观锁拦截器
+        OptimisticLockerInnerInterceptor optimisticLockerInnerInterceptor = new OptimisticLockerInnerInterceptor();
+        interceptor.addInnerInterceptor(optimisticLockerInnerInterceptor);
         return interceptor;
     }
 }
